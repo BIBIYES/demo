@@ -31,6 +31,7 @@ var con = mysql.createConnection({
 CREATE DATABASE IF NOT EXISTS `clipboard`;
 
 -- Switch to the selected database
+```sql
 USE `clipboard`;
 
 -- Now create the table within the selected database
@@ -41,3 +42,5 @@ CREATE TABLE IF NOT EXISTS `clipboard` (
   `count` int DEFAULT '0',
   `last_viewed_at` timestamp NULL DEFAULT NULL
 );
+
+```
