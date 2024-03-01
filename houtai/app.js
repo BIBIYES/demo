@@ -13,7 +13,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const port = 3000;
+const port = 3002;
 var con = mysql.createConnection({
   host: "localhost",
   user: "root",

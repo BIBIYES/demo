@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus'
 export const request = axios.create({
-  baseURL: 'http://127.0.0.1:3000',  // 添加协议部分
+  baseURL: 'http://156.224.25.233:3002',  // 添加协议部分
   timeout: 5000,
 });
 // 添加请求拦截器
