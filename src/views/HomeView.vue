@@ -56,7 +56,6 @@ function generateRandomNumber(length) {
 
 <template>
   <div class="app">
-  
     <div id="nav">
       <ul>
         <li class="left">

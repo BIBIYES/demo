@@ -1,9 +1,12 @@
-const mysql = require("mysql");
-const express = require("express");
-const bodyParser = require("body-parser");
+const sqlite3 = require('sqlite3').verbose();
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const { log } = require('console');
+
 const app = express();
-const cors = require("cors");
-const { log } = require("console");
+const port = 3002;
+
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use((req, res, next) => {
@@ -13,71 +16,81 @@ app.use((req, res, next) => {
   next();
 });
 
-const port = 3002;
-var con = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "root",
-  database: 'clipboard'
+// Create and connect to SQLite database
+const db = new sqlite3.Database('./clipboard.db', (err) => {
+  if (err) {
+    console.error(err.message);
+  }
+  console.log('Connected to the SQLite database.');
 });
-con.connect(function (err) {
-  if (err) throw err;
-  console.log("数据库连接成功");
-});
-//封装创建数据库 传递一个id 和一个返回值
+
+// Create table if it doesn't exist
+db.run(`
+  CREATE TABLE IF NOT EXISTS clipboard (
+    id TEXT PRIMARY KEY,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    count INTEGER DEFAULT 0,
+    last_viewed_at TIMESTAMP DEFAULT NULL
+  )
+`);
+
+// Function to create a clipboard
 function createClipboard(id, res) {
-  const sql = `INSERT INTO clipboard (id) VALUES ('${id}')`
-  con.query(sql, (err, result) => {
+  const sql = `INSERT INTO clipboard (id) VALUES (?)`;
+  db.run(sql, [id], function (err) {
     if (err) {
       console.log('创建失败' + err);
       res.json({
         status: 500,
         message: "创建失败"
-      })
-      return false
+      });
+      return false;
     }
-    return true
-  })
+    return true;
+  });
 }
 
-// 创建数据库
+// Create clipboard endpoint
 app.post('/createClipboard', (req, res) => {
-  const { id } = req.body
+  const { id } = req.body;
   console.log('创建一个剪贴板中索引是' + id);
+  createClipboard(id, res);
   res.json({
     status: 200,
     message: "剪贴板创建成功"
-  })
-})
-// 插入一个上下文
+  });
+});
+
+// Insert content endpoint
 app.post('/insertContent', (req, res) => {
-  const { id, content } = req.body
-  console.log('正在插入上下文')
-  // 用户插入一个上下文
-  const insertSql = `UPDATE clipboard SET content = '${content}' WHERE id = '${id}'`
-  con.query(insertSql, (err, result) => {
+  const { id, content } = req.body;
+  console.log('正在插入上下文');
+  const insertSql = `UPDATE clipboard SET content = ?, last_viewed_at = CURRENT_TIMESTAMP WHERE id = ?`;
+  db.run(insertSql, [content, id], function (err) {
     if (err) {
-      console.log('查询上下文出错' + err)
+      console.log('查询上下文出错' + err);
       res.json({
         status: 500,
         message: '查询上下文出错'
-      })
-      return
+      });
+      return;
     }
     console.log('ok!插入数据成功');
     res.json({
       status: 200,
       message: '文本保存成功',
-    })
-  })
-})
-// 获取剪贴板数据
+    });
+  });
+});
+
+// Get clipboard data endpoint
 app.post('/getClipboard', (req, res) => {
   const { id } = req.body;
   console.log('请求剪贴板' + id);
-  const checkExistenceQuery = `SELECT * FROM clipboard WHERE id = '${id}'`;
+  const checkExistenceQuery = `SELECT * FROM clipboard WHERE id = ?`;
 
-  con.query(checkExistenceQuery, (error, results, fields) => {
+  db.get(checkExistenceQuery, [id], (error, row) => {
     if (error) {
       console.log('数据库查询错误', error);
       res.json({
@@ -87,45 +100,32 @@ app.post('/getClipboard', (req, res) => {
       return;
     }
 
-    if (results.length === 0) {
+    if (!row) {
       console.log('没有这个索引正在创建');
       createClipboard(id, res);
-
-    }
-
-    // 更新数据库剪贴板的查看次数
-    const updateSql = `UPDATE clipboard SET count = count + 1 WHERE id = '${id}'`;
-    con.query(updateSql, (err, result) => {
-      if (err) {
-        console.log('添加查看次数错误', err);
-        res.json({
-          status: 500,
-          message: '查看次数添加失败'
-        });
-        return; // 提前结束函数执行
-      }
-
-      const selectSql = `SELECT * FROM clipboard WHERE id = ?`;
-      con.query(selectSql, [id], (err, result) => {
+    } else {
+      // 更新数据库剪贴板的查看次数
+      const updateSql = `UPDATE clipboard SET count = count + 1, last_viewed_at = CURRENT_TIMESTAMP WHERE id = ?`;
+      db.run(updateSql, [id], function (err) {
         if (err) {
-          console.log('获取失败', err);
+          console.log('添加查看次数错误', err);
           res.json({
             status: 500,
-            message: '获取数据失败'
+            message: '查看次数添加失败'
           });
-          return; // 提前结束函数执行
+          return;
         }
 
-        console.log('ok!正在返回剪贴板数据');
         res.json({
           status: 200,
           message: '成功获取到剪贴板数据',
-          data: result
+          data: row
         });
       });
-    });
+    }
   });
 });
+
 
 app.listen(port, () => {
   console.log(`运行成功正在监听端口 ${port}`);

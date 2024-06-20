@@ -1,36 +1,45 @@
 <script setup>
-import { query, insert } from '@/api/content';
-import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
-const route = useRoute();
+import { query, insert } from '@/api/content'
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+const route = useRoute()
 defineOptions({
   name: 'ContentIndex'
-});
+})
 // 页面获取剪贴板数据
-const id = ref(route.params.id);
-// 创建时间
+const id = ref(route.params.id)
 const createTime = ref(null)
 const viewTimes = ref(null)
+const content = ref(null)
+
 onMounted(async () => {
-  const res = await query(id.value);
-  createTime.value = res.data[0].created_at
-  content.value = res.data[0].content
-  viewTimes.value = res.data[0].count
-});
+  try {
+    const res = await query(id.value)
+    if (res.status === 200 && res.data) {
+      createTime.value = res.data.created_at
+      content.value = res.data.content
+      viewTimes.value = res.data.count
+    } else {
+      console.error('Failed to fetch clipboard data:', res.message)
+    }
+  } catch (error) {
+    console.error('Error fetching clipboard data:', error)
+  }
+})
 
 // 剪贴板插入数据
-const content = ref(null)
 const updateContent = async () => {
-  await insert({
-    id: route.params.id,
-    content
-  })
-  
+  try {
+    await insert({
+      id: route.params.id,
+      content: content.value
+    })
+  } catch (error) {
+    console.error('Error inserting content:', error)
+  }
 }
-
-
-
 </script>
+
 <template>
   <div class="app">
     <div id="nav">
@@ -38,7 +47,7 @@ const updateContent = async () => {
         <li class="left">
           <a href="">INTERNET CLIPBOARD</a>
         </li>
-
+        <p style="float: left; color: red">项目还不完善请你点击阅读完成之后点击清除按钮</p>
         <li class="juzhong" v-show="false">
           Lost time
           <select name="" id="">
@@ -53,60 +62,62 @@ const updateContent = async () => {
         </li>
         <li class="right">
           <button class="submit" @click="updateContent">
-            <img src="../assets/正确.svg" alt="">
+            <img src="../assets/正确.svg" alt="" />
           </button>
         </li>
         <li class="right">
-          <input type="text" class="index" :value="route.params.id">
+          <input type="text" class="index" :value="route.params.id" />
         </li>
-        <li class="right">
-          Current index:
-        </li>
+        <li class="right">Current index:</li>
       </ul>
     </div>
     <div id="mainBox">
       <div id="content">
-        <textarea v-model="content" name="" id="" cols="96" rows="30" placeholder=" 
+        <textarea
+          v-model="content"
+          name=""
+          id=""
+          cols="96"
+          rows="30"
+          placeholder=" 
                 可以随便记录点什么，单次支持28万字符。.
                 剪贴板只要有效期内有查看或修改则永不过期，将自动延期所设置有效期时长
-                使用后请主动删除剪贴板，避免数据长时间存储造成数据泄露。"></textarea>
+                使用后请主动删除剪贴板，避免数据长时间存储造成数据泄露。"
+        ></textarea>
       </div>
       <div id="tools">
         <div class="copy-box">
           <button class="copy-button">
-            <img src="../assets/复制文件.svg" alt="">
+            <img src="../assets/复制文件.svg" alt="" />
           </button>
         </div>
         <div class="download-box">
           <button class="download-button">
-            <img src="../assets/下载.svg" alt="">
+            <img src="../assets/下载.svg" alt="" />
+          </button>
+        </div>
+        <br>
+        <div class="copy-box">
+          <button class="copy-button">
+            <img src="../assets/复制文件.svg" alt="" />
           </button>
         </div>
         <div>
           <ul class="time">
-            <li>
-              创建时间
-            </li>
-            <li>
-              {{ createTime }}
-            </li>
-            <li>
-              查看次数
-            </li>
-            <li>
-              {{ viewTimes }}
-            </li>
+            <li>创建时间</li>
+            <li>{{ createTime }}</li>
+            <li>查看次数</li>
+            <li>{{ viewTimes }}</li>
           </ul>
         </div>
       </div>
     </div>
     <div id="bottom">
-      <p>
-        THE INTERNET CLIPBOARD FROM LUOZIHAO
-      </p>
+      <p>THE INTERNET CLIPBOARD FROM LUOZIHAO</p>
     </div>
   </div>
 </template>
+
 <style scoped>
 /* 重置默认的边距、内边距、盒模型、字体 */
 * {
@@ -116,9 +127,8 @@ const updateContent = async () => {
   /* 内边距为0 */
   box-sizing: border-box;
   /* 使用边框盒模型 */
-  font-family: "MyCustomFont", sans-serif;
+  font-family: 'MyCustomFont', sans-serif;
   /* 使用微软雅黑字体 */
-
 }
 
 div,
@@ -155,7 +165,6 @@ li {
   /* 设置阴影 */
   background: url(../assets/清单.svg) no-repeat 20px center;
   /* 设置背景图片 */
-
 }
 
 /* 垂直居中导航项 */
@@ -224,10 +233,8 @@ select {
   border: #3f72af 3px solid;
   text-align: center;
   color: #3f72af;
-  font-family: "微软雅黑";
+  font-family: '微软雅黑';
   outline: none;
-
-
 }
 
 .submit {
@@ -254,8 +261,6 @@ select {
   border: #3f72af solid 2px;
   margin-top: 5px;
   float: left;
-
-
 }
 
 /* 文本域样式 */
@@ -267,7 +272,7 @@ select {
   border: solid 0px;
   outline: none;
   font-size: 16px;
-  font-family: "微软雅黑";
+  font-family: '微软雅黑';
   caret-color: black;
   padding: 50px;
 }
@@ -287,15 +292,12 @@ select {
   height: 60px;
   margin: 0 auto;
   margin-bottom: 50px;
-
 }
 
 .download-box {
   width: 100px;
   height: 60px;
   margin: 0 auto;
-
-
 }
 
 .copy-button {
@@ -306,8 +308,6 @@ select {
   border-radius: 50px;
   line-height: 65px;
   transition: 0.1s;
-
-
 }
 
 .download-button {
@@ -344,7 +344,6 @@ select {
   width: 300px;
   height: 50px;
   font-size: 18px;
-
 }
 
 /* 底部导航栏 */
